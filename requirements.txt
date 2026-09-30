@@ -1,0 +1,6 @@
+python-dotenv
+chromadb
+ollama
+PyMuPDF
+python-docx
+pytest

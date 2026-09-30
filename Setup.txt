@@ -1,0 +1,34 @@
+# 1. Clone / create the folder, then:
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+
+# 2. Install
+pip install -r requirements.txt
+
+# 3. Configure
+cp .env.example .env            # Windows: copy .env.example .env
+
+# 4. Ensure Ollama is running and pull the models
+ollama pull qwen3:8b
+ollama pull nomic-embed-text
+
+# 5. Add some documents
+#    (put .pdf / .docx / .txt / .md files into ./documents/)
+
+# 6. Ingest
+python main.py ingest
+
+# 7. Inspect
+python main.py stats
+
+# 8. Chat
+python main.py chat
+
+# 9. (Optional) Reset
+python main.py clear
+
+# 10. Tests
+pytest -q
