@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 from rank_bm25 import BM25Okapi
 
-from src.vector_store import VectorStore
+from src.vector_store import VectorStoreProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class HybridRetriever:
 
     def __init__(
         self,
-        vector_store: VectorStore,
+        vector_store: VectorStoreProtocol,
         top_k: int = 20,
         dense_weight: float = 0.7,
         sparse_weight: float = 0.3,

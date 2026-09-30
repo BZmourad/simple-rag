@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
-import fitz  # PyMuPDF
+import pymupdf as fitz
 import pytesseract
 from docx import Document as DocxDocument
 from PIL import Image
