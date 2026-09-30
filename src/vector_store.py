@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -13,7 +14,25 @@ from src.chunker import Chunk
 from src.embeddings import OllamaEmbedder
 
 logger = logging.getLogger(__name__)
+_VALID_NAME = re.compile(r"[^a-zA-Z0-9._-]")
 
+def sanitize_collection_name(name: str) -> str:
+    """Return a ChromaDB/Qdrant-safe collection name.
+
+    - Replaces invalid characters with '-'
+    - Pads names shorter than 3 chars
+    - Truncates names longer than 512 chars
+    """
+    if not name:
+        return "default"
+    cleaned = _VALID_NAME.sub("-", name.strip())
+    cleaned = cleaned.strip("-._")  # must start/end with alnum
+    if len(cleaned) < 3:
+        cleaned = f"col-{cleaned}" if cleaned else "col-default"
+    cleaned = cleaned[:512].rstrip("-._")
+    if len(cleaned) < 3:
+        cleaned = "col-default"
+    return cleaned
 
 class VectorStoreError(RuntimeError):
     pass
@@ -49,7 +68,7 @@ class ChromaVectorStore:
             raise VectorStoreError(f"Failed to initialise ChromaDB: {exc}") from exc
 
     def _collection(self, collection: str | None = None):
-        name = collection or self.default_collection
+        name = sanitize_collection_name(collection or self.default_collection)
         try:
             return self._client.get_or_create_collection(
                 name=name,
@@ -132,7 +151,7 @@ class ChromaVectorStore:
         return int(self._collection(collection).count())
 
     def reset(self, collection: str | None = None) -> None:
-        name = collection or self.default_collection
+        name = sanitize_collection_name(collection or self.default_collection)
         try:
             self._client.delete_collection(name)
             self._client.get_or_create_collection(name=name, metadata={"hnsw:space": "cosine"})
