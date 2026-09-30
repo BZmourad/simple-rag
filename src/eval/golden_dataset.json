@@ -1,0 +1,15 @@
+{
+    "collection": "default",
+    "items": [
+      {
+        "question": "How many annual leave days do employees get?",
+        "expected_sources": ["test.txt"],
+        "expected_answer_criteria": "Mentions 25 days and carry-over rules."
+      },
+      {
+        "question": "What is the capital of France?",
+        "expected_sources": [],
+        "expected_answer_criteria": "Refuses because it is outside the knowledge base."
+      }
+    ]
+  }

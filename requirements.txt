@@ -1,6 +1,24 @@
+# Core
 python-dotenv
 chromadb
 ollama
 PyMuPDF
 python-docx
+
+# v2 additions
+rank-bm25
+sentence-transformers
+pytesseract
+Pillow
+qdrant-client
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+httpx
+sse-starlette
+ragas
+pandas
+tqdm
 pytest
+pytest-asyncio

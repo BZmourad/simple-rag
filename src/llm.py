@@ -1,9 +1,9 @@
-"""Ollama LLM client with a strict, replaceable interface."""
+"""Ollama LLM client with streaming support."""
 
 from __future__ import annotations
 
 import logging
-from typing import Iterable
+from typing import Iterable, Iterator
 
 import ollama
 
@@ -21,26 +21,41 @@ class OllamaLLM:
         self._client = ollama.Client(host=base_url)
 
     def generate(self, system: str, messages: Iterable[dict]) -> str:
-        """Run a chat completion with the given system prompt and messages."""
         payload = [{"role": "system", "content": system}, *messages]
         try:
             response = self._client.chat(model=self.model, messages=payload)
         except Exception as exc:
             raise LLMError(
-                f"Failed to call Ollama LLM '{self.model}' at {self.base_url}. "
-                f"Make sure Ollama is running and the model is pulled. Error: {exc}"
+                f"Failed to call Ollama LLM '{self.model}'. "
+                f"Ensure Ollama is running and the model is pulled. Error: {exc}"
             ) from exc
 
         if isinstance(response, dict):
-            message = response.get("message") or {}
-            content = message.get("content", "")
+            content = (response.get("message") or {}).get("content", "")
         else:
-            message = getattr(response, "message", None)
-            content = getattr(message, "content", "") if message else ""
-
+            content = getattr(getattr(response, "message", None), "content", "") or ""
         if not content:
             raise LLMError("Ollama returned an empty response.")
         return content.strip()
+
+    def stream_generate(self, system: str, messages: Iterable[dict]) -> Iterator[str]:
+        """Yield tokens as they are produced."""
+        payload = [{"role": "system", "content": system}, *messages]
+        try:
+            stream = self._client.chat(model=self.model, messages=payload, stream=True)
+        except Exception as exc:
+            raise LLMError(
+                f"Failed to stream from Ollama LLM '{self.model}'. "
+                f"Ensure Ollama is running. Error: {exc}"
+            ) from exc
+
+        for chunk in stream:
+            if isinstance(chunk, dict):
+                content = (chunk.get("message") or {}).get("content", "")
+            else:
+                content = getattr(getattr(chunk, "message", None), "content", "") or ""
+            if content:
+                yield content
 
     def health_check(self) -> None:
         try:
