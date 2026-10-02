@@ -233,14 +233,20 @@ class QdrantVectorStore:
         return len(points)
 
     def query(self, query_text: str, top_k: int, collection: str | None = None) -> list[dict]:
-        name = collection or self.default_collection
+        name = sanitize_collection_name(collection or self.default_collection)
         try:
             query_vec = self.embedder.embed_one(query_text)
-            hits = self._client.search(collection_name=name, query_vector=query_vec, limit=top_k)
+            response = self._client.query_points(
+                collection_name=name,
+                query=query_vec,
+                limit=top_k,
+                with_payload=True,
+            )
         except Exception as exc:
             raise VectorStoreError(f"Qdrant query failed: {exc}") from exc
+
         results = []
-        for h in hits:
+        for h in response.points:
             payload = dict(h.payload or {})
             text = payload.pop("text", "")
             results.append({
