@@ -120,6 +120,27 @@ class Config:
     # Reranker cache
     reranker_cache_size: int
 
+    # Auth
+    auth_mode: str
+    jwt_access_expire_minutes: int
+    jwt_refresh_expire_days: int
+
+    # Graph
+    graph_backend: str
+    falkordb_path: Path
+
+    # RAGAS tracking
+    ragas_tracking_enabled: bool
+    ragas_db_path: Path
+
+    # Celery beat
+    celery_beat_enabled: bool
+    celery_ingest_schedule_minutes: int
+
+    # Flower
+    flower_port: int
+    flower_basic_auth: str
+
 
 def load_config() -> Config:
     cfg = Config(
@@ -181,6 +202,19 @@ def load_config() -> Config:
         rate_limit_per_minute=_get_int("RATE_LIMIT_PER_MINUTE", 30),
         rate_limit_per_day=_get_int("RATE_LIMIT_PER_DAY", 500),
         reranker_cache_size=_get_int("RERANKER_CACHE_SIZE", 1),
+        graph_backend=os.getenv("GRAPH_BACKEND", "networkx"),
+        falkordb_path=Path(os.getenv("FALKORDB_PATH", "./data/falkordb.db")).resolve(),
+        auth_mode=os.getenv("AUTH_MODE", "jwt").lower(),
+        jwt_access_expire_minutes=_get_int("JWT_ACCESS_EXPIRE_MINUTES", 30),
+        jwt_refresh_expire_days=_get_int("JWT_REFRESH_EXPIRE_DAYS", 7),
+        graph_backend=os.getenv("GRAPH_BACKEND", "falkordb").lower(),
+        falkordb_path=Path(os.getenv("FALKORDB_PATH", "./data/falkordb.db")).resolve(),
+        ragas_tracking_enabled=_get_bool("RAGAS_TRACKING_ENABLED", True),
+        ragas_db_path=Path(os.getenv("RAGAS_DB_PATH", "./data/ragas_history.db")).resolve(),
+        celery_beat_enabled=_get_bool("CELERY_BEAT_ENABLED", True),
+        celery_ingest_schedule_minutes=_get_int("CELERY_INGEST_SCHEDULE_MINUTES", 60),
+        flower_port=_get_int("FLOWER_PORT", 5555),
+        flower_basic_auth=os.getenv("FLOWER_BASIC_AUTH", "monitoring:change-me"),
     )
 
     # Validation

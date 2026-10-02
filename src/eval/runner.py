@@ -6,7 +6,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-
+from src.eval.tracker import RagasTracker
 from src.config import Config
 from src.history_store import HistoryStore
 from src.hybrid_retriever import HybridRetriever
@@ -88,4 +88,28 @@ def run_eval(cfg: Config) -> int:
     hit_rate = hits / len(items) if items else 0.0
     print()
     print(f"Retrieval hit-rate: {hit_rate:.2%} ({hits}/{len(items)})")
-    return 0
+    if cfg.ragas_tracking_enabled:
+        tracker = RagasTracker(cfg.ragas_db_path)
+        # Get git commit if available
+        import subprocess
+        try:
+            commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd="/opt/simple-rag").decode().strip()
+        except Exception:
+            commit = None
+
+        run_id = tracker.record(
+            collection=collection,
+            num_items=len(items),
+            faithfulness=summary["faithfulness"],
+            context_precision=summary["context_precision"],
+            context_recall=summary["context_recall"],
+            git_commit=commit,
+        )
+        comparison = tracker.compare(collection)
+        print(f"\nRun #{run_id} recorded.")
+        print(f"Regression check: {comparison['status']}")
+        if comparison.get("regressions"):
+            print("⚠️  Regressions detected:")
+            for metric, delta in comparison["regressions"].items():
+                print(f"    {metric}: {delta:+.4f}")
+        tracker.close()

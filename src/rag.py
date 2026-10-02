@@ -1,7 +1,7 @@
 """RAG orchestration v2: hybrid retrieval + rerank + persistent history."""
 
 from __future__ import annotations
-
+from src.graph_store_falkor import FalkorGraphStore
 import logging
 from dataclasses import dataclass, field
 from src.query_expander import QueryExpander
@@ -54,8 +54,8 @@ class RAGPipeline:
         self.debug = debug
         self.last_sources: list = []
         self.query_expander = query_expander
-        self.knowledge_graph = knowledge_graph
         self.graph_max_depth = graph_max_depth
+        self.knowledge_graph: FalkorGraphStore | None = knowledge_graph
 
     def answer(self, question: str) -> RAGAnswer:
         question = (question or "").strip()
@@ -80,6 +80,15 @@ class RAGPipeline:
         graph_context = ""
         if self.knowledge_graph and candidates:
             graph_context = graph_augment_context(self.knowledge_graph, question, self.graph_max_depth)
+
+        if self.knowledge_graph:
+            ents = self.knowledge_graph.find_entities(question)
+            if ents:
+                triples = self.knowledge_graph.traverse(ents, max_depth=self.graph_max_depth)
+                if triples:
+                    graph_context = "Knowledge graph context:\n" + "\n".join(
+                        f"{s} --{r}--> {t}" for s, r, t in triples
+                    )
 
         # 4. Re-rank with cross-encoder
         if self.reranker and candidates:

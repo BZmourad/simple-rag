@@ -1,7 +1,7 @@
 """Celery application for async ingestion."""
 
 from __future__ import annotations
-
+from celery.schedules import crontab
 import os
 
 from celery import Celery
@@ -27,3 +27,15 @@ celery_app.conf.update(
     task_acks_late=True,
     task_reject_on_worker_lost=True,
 )
+
+INGEST_SCHEDULE_MINUTES = int(os.getenv("CELERY_INGEST_SCHEDULE_MINUTES", "60"))
+
+celery_app.conf.beat_schedule = {
+    "re-ingest-documents": {
+        "task": "ingest.run",
+        "schedule": crontab(minute=f"*/{INGEST_SCHEDULE_MINUTES}"),
+        "args": (None,),  # None = default collection
+        "options": {"expires": 1800},
+    },
+}
+celery_app.conf.timezone = "UTC"

@@ -137,17 +137,15 @@ class GraphRAGExtractor:
             return self._extract_heuristic(text)
 
 
-def build_knowledge_graph(chunks: list, extractor: GraphRAGExtractor) -> KnowledgeGraph:
-    """Build a knowledge graph from a list of chunks."""
-    kg = KnowledgeGraph()
+def build_knowledge_graph(chunks: list, extractor: "GraphRAGExtractor", store) -> None:
+    """Populate the persistent graph store from chunks."""
     for chunk in chunks:
         entities, relations = extractor.extract(chunk.text)
         for e in entities:
-            kg.add_entity(e)
+            store.add_entity(e.name, e.entity_type)
         for r in relations:
-            kg.add_relation(r)
-    logger.info("Knowledge graph built: %d nodes, %d edges", kg.graph.number_of_nodes(), kg.graph.number_of_edges())
-    return kg
+            store.add_relation(r.source, r.relation, r.target, context=r.context)
+    logger.info("Graph updated: %s", store.stats())
 
 
 def graph_augment_context(kg: KnowledgeGraph, query: str, max_depth: int = 2) -> str:
