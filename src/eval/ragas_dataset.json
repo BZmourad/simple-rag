@@ -1,12 +1,20 @@
 {
-    "items": [
-      {
-        "question": "How many annual leave days do employees get?",
-        "ground_truth": "Employees receive 25 days of paid annual leave per year.",
-        "answer": "The company provides 25 days of paid annual leave per year.",
-        "contexts": [
-          "The company provides 25 days of paid annual leave per year. Employees may carry over up to 5 unused days to the next calendar year."
-        ]
-      }
-    ]
-  }
+  "items": [
+    {
+      "question": "How many annual leave days do employees get?",
+      "ground_truth": "Employees receive 25 days of paid annual leave per year and may carry over up to 5 unused days to the next calendar year.",
+      "answer": "The company provides 25 days of paid annual leave per year.",
+      "contexts": [
+        "The company provides 25 days of paid annual leave per year. Employees may carry over up to 5 unused days to the next calendar year."
+      ]
+    },
+    {
+      "question": "Can unused leave days be transferred to the next year?",
+      "ground_truth": "Yes, up to 5 unused annual leave days can be carried over to the next calendar year.",
+      "answer": "Employees may carry over up to 5 unused days to the next calendar year.",
+      "contexts": [
+        "The company provides 25 days of paid annual leave per year. Employees may carry over up to 5 unused days to the next calendar year."
+      ]
+    }
+  ]
+}
