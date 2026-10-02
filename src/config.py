@@ -10,19 +10,46 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def _clean_env_value(raw: str) -> str:
+    """Strip whitespace and any inline '# comment' from a value."""
+    if raw is None:
+        return ""
+    import re
+    stripped = re.split(r"\s+#", raw, maxsplit=1)[0]
+    return stripped.strip()
+
 
 def _get_bool(key: str, default: bool = False) -> bool:
-    return os.getenv(key, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+    raw = _clean_env_value(os.getenv(key, ""))
+    if not raw:
+        return default
+    return raw.lower() in {"1", "true", "yes", "on"}
 
 
 def _get_int(key: str, default: int) -> int:
-    raw = os.getenv(key)
-    return default if raw is None or raw.strip() == "" else int(raw)
+    raw = _clean_env_value(os.getenv(key, ""))
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise ValueError(
+            f"Environment variable {key} must be an integer, got {raw!r}. "
+            f"Hint: inline comments in .env are not supported."
+        ) from exc
 
 
 def _get_float(key: str, default: float) -> float:
-    raw = os.getenv(key)
-    return default if raw is None or raw.strip() == "" else float(raw)
+    raw = _clean_env_value(os.getenv(key, ""))
+    if not raw:
+        return default
+    try:
+        return float(raw)
+    except ValueError as exc:
+        raise ValueError(
+            f"Environment variable {key} must be a float, got {raw!r}. "
+            f"Hint: inline comments in .env are not supported."
+        ) from exc
 
 
 @dataclass(frozen=True)
