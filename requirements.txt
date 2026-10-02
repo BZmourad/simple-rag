@@ -22,3 +22,16 @@ pandas
 tqdm
 pytest
 pytest-asyncio
+
+# v3 additions
+ragas
+langchain-ollama
+langchain-community
+datasets
+celery[redis]
+redis
+flower
+networkx
+gliner
+fastapi-limiter
+python-jose[cryptography]

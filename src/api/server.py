@@ -25,6 +25,7 @@ from src.llm import LLMError, OllamaLLM
 from src.rag import RAGPipeline
 from src.reranker import CrossEncoderReranker
 from src.vector_store import VectorStoreError, create_vector_store
+from src.api.auth import AuthManager
 
 logger = logging.getLogger(__name__)
 
@@ -57,14 +58,21 @@ def _build_pipeline(cfg: Config, collection: str, session_id: str = "api"):
 
 
 def create_app(cfg: Config) -> FastAPI:
-    app = FastAPI(title="Simple RAG API", version="2.0.0")
-
+    app = FastAPI(title="Simple RAG API", version="3.0.0")
+    auth = AuthManager(
+        enabled=cfg.auth_enabled,
+        valid_keys=cfg.api_keys,
+        rate_limit_enabled=cfg.rate_limit_enabled,
+        redis_url=cfg.rate_limit_redis_url,
+        per_minute=cfg.rate_limit_per_minute,
+        per_day=cfg.rate_limit_per_day,
+    )
     @app.get("/health")
     def health():
         return {"status": "ok"}
 
     @app.post("/ingest", response_model=IngestResponse)
-    def ingest(collection: str | None = None):
+    def ingest(collection: str | None = None, user=Depends(auth.require_auth)):
         coll = collection or cfg.default_collection
         try:
             store, retriever, _ = _build_pipeline(cfg, coll)
@@ -91,7 +99,7 @@ def create_app(cfg: Config) -> FastAPI:
         )
 
     @app.post("/ask", response_model=AskResponse)
-    def ask(req: AskRequest):
+    def ask(req: AskRequest, user=Depends(auth.require_auth)):
         coll = req.collection or cfg.default_collection
         try:
             _, _, pipeline = _build_pipeline(cfg, coll, session_id=req.session_id)

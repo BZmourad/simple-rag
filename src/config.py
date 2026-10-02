@@ -80,6 +80,46 @@ class Config:
 
     debug: bool
 
+    # RAGAS
+    ragas_enabled: bool
+    ragas_judge_model: str
+    ragas_judge_embedding: str
+    ragas_dataset_path: Path
+
+    # Celery
+    celery_broker_url: str
+    celery_result_backend: str
+    celery_task_time_limit: int
+    celery_task_soft_time_limit: int
+
+    # Query expansion
+    query_expansion_enabled: bool
+    query_expansion_mode: str
+    query_expansion_num_queries: int
+    query_expansion_hyde_temp: float
+
+    # Graph RAG
+    graph_rag_enabled: bool
+    graph_extraction_method: str
+    graph_entity_threshold: float
+    graph_max_depth: int
+
+    # Auth
+    auth_enabled: bool
+    api_keys: list[str]
+    jwt_secret: str
+    jwt_algorithm: str
+    jwt_expire_minutes: int
+
+    # Rate limiting
+    rate_limit_enabled: bool
+    rate_limit_redis_url: str
+    rate_limit_per_minute: int
+    rate_limit_per_day: int
+
+    # Reranker cache
+    reranker_cache_size: int
+
 
 def load_config() -> Config:
     cfg = Config(
@@ -115,6 +155,32 @@ def load_config() -> Config:
         api_port=_get_int("API_PORT", 8000),
         eval_dataset_path=Path(os.getenv("EVAL_DATASET_PATH", "./eval/golden_dataset.json")).resolve(),
         debug=_get_bool("DEBUG", False),
+        ragas_enabled=_get_bool("RAGAS_ENABLED", True),
+        ragas_judge_model=os.getenv("RAGAS_JUDGE_MODEL", os.getenv("LLM_MODEL", "qwen3:8b")),
+        ragas_judge_embedding=os.getenv("RAGAS_JUDGE_EMBEDDING", os.getenv("EMBEDDING_MODEL", "nomic-embed-text")),
+        ragas_dataset_path=Path(os.getenv("RAGAS_DATASET_PATH", "./eval/ragas_dataset.json")).resolve(),
+        celery_broker_url=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/1"),
+        celery_result_backend=os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/2"),
+        celery_task_time_limit=_get_int("CELERY_TASK_TIME_LIMIT", 3600),
+        celery_task_soft_time_limit=_get_int("CELERY_TASK_SOFT_TIME_LIMIT", 3300),
+        query_expansion_enabled=_get_bool("QUERY_EXPANSION_ENABLED", True),
+        query_expansion_mode=os.getenv("QUERY_EXPANSION_MODE", "hyde"),
+        query_expansion_num_queries=_get_int("QUERY_EXPANSION_NUM_QUERIES", 3),
+        query_expansion_hyde_temp=_get_float("QUERY_EXPANSION_HYDE_TEMP", 0.7),
+        graph_rag_enabled=_get_bool("GRAPH_RAG_ENABLED", False),
+        graph_extraction_method=os.getenv("GRAPH_EXTRACTION_METHOD", "gliner"),
+        graph_entity_threshold=_get_float("GRAPH_ENTITY_THRESHOLD", 0.5),
+        graph_max_depth=_get_int("GRAPH_MAX_DEPTH", 2),
+        auth_enabled=_get_bool("AUTH_ENABLED", True),
+        api_keys=[k.strip() for k in os.getenv("API_KEYS", "").split(",") if k.strip()],
+        jwt_secret=os.getenv("JWT_SECRET", "change-me"),
+        jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
+        jwt_expire_minutes=_get_int("JWT_EXPIRE_MINUTES", 60),
+        rate_limit_enabled=_get_bool("RATE_LIMIT_ENABLED", True),
+        rate_limit_redis_url=os.getenv("RATE_LIMIT_REDIS_URL", "redis://localhost:6379/0"),
+        rate_limit_per_minute=_get_int("RATE_LIMIT_PER_MINUTE", 30),
+        rate_limit_per_day=_get_int("RATE_LIMIT_PER_DAY", 500),
+        reranker_cache_size=_get_int("RERANKER_CACHE_SIZE", 1),
     )
 
     # Validation
@@ -124,4 +190,6 @@ def load_config() -> Config:
         raise ValueError("CHUNK_OVERLAP must be smaller than CHUNK_SIZE")
     if not 0.0 <= cfg.relevance_threshold <= 1.0:
         raise ValueError("RELEVANCE_THRESHOLD must be between 0.0 and 1.0")
+    if cfg.auth_enabled and not cfg.api_keys:
+        raise ValueError("AUTH_ENABLED=true requires at least one API key in API_KEYS")
     return cfg

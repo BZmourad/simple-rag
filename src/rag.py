@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-
+from src.query_expander import QueryExpander
+from src.graph_rag import KnowledgeGraph, graph_augment_context
 from src.history_store import HistoryStore
 from src.hybrid_retriever import HybridChunk, HybridRetriever
 from src.llm import LLMError, OllamaLLM
@@ -37,6 +38,9 @@ class RAGPipeline:
         relevance_threshold: float = 0.70,
         history_store: HistoryStore | None = None,
         collection: str | None = None,
+        query_expander: QueryExpander | None = None,
+        knowledge_graph: KnowledgeGraph | None = None,
+        graph_max_depth: int = 2,
         debug: bool = False,
     ) -> None:
         self.retriever = retriever
@@ -49,18 +53,35 @@ class RAGPipeline:
         self.collection = collection
         self.debug = debug
         self.last_sources: list = []
+        self.query_expander = query_expander
+        self.knowledge_graph = knowledge_graph
+        self.graph_max_depth = graph_max_depth
 
     def answer(self, question: str) -> RAGAnswer:
         question = (question or "").strip()
         if not question:
             return RAGAnswer(answer="Please provide a non-empty question.")
 
-        # 1. Hybrid retrieval (dense + sparse)
-        candidates = self.retriever.retrieve(question)
-        if self.debug:
-            logger.info("Hybrid retrieved %d candidates", len(candidates))
+        # 1. Query expansion
+        queries = [question]
+        if self.query_expander:
+            queries = self.query_expander.expand(question)
 
-        # 2. Re-rank with cross-encoder
+        # 2. Retrieve for each expanded query and merge
+        all_candidates: dict[str, HybridChunk] = {}
+        for q in queries:
+            for c in self.retriever.retrieve(q):
+                key = c.metadata.get("chunk_id") or c.text[:80]
+                if key not in all_candidates or c.rrf_score > all_candidates[key].rrf_score:
+                    all_candidates[key] = c
+        candidates = list(all_candidates.values())
+
+        # 3. Graph augmentation
+        graph_context = ""
+        if self.knowledge_graph and candidates:
+            graph_context = graph_augment_context(self.knowledge_graph, question, self.graph_max_depth)
+
+        # 4. Re-rank with cross-encoder
         if self.reranker and candidates:
             reranked = self.reranker.rerank(question, candidates, top_k=self.rerank_top_k)
             final_chunks = [
@@ -77,7 +98,7 @@ class RAGPipeline:
         else:
             final_chunks = candidates[: self.rerank_top_k]
 
-        # 3. Threshold filter
+        # 5. Threshold filter
         kept = [c for c in final_chunks if c.similarity >= self.relevance_threshold or c.rrf_score > 0]
         if self.debug:
             for i, c in enumerate(kept, 1):
@@ -88,7 +109,7 @@ class RAGPipeline:
             self._push_history(question, NO_CONTEXT_ANSWER)
             return RAGAnswer(answer=NO_CONTEXT_ANSWER, sources=[], used_context=False)
 
-        # 4. Build prompt and generate
+        # 6. Build prompt and generate
         context_block = build_context_block(kept)
         system_prompt = SYSTEM_PROMPT.format(context=context_block)
         history = self.history_store.get_recent(self.max_history_messages) if self.history_store else []

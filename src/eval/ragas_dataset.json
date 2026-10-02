@@ -1,0 +1,12 @@
+{
+    "items": [
+      {
+        "question": "How many annual leave days do employees get?",
+        "ground_truth": "Employees receive 25 days of paid annual leave per year.",
+        "answer": "The company provides 25 days of paid annual leave per year.",
+        "contexts": [
+          "The company provides 25 days of paid annual leave per year. Employees may carry over up to 5 unused days to the next calendar year."
+        ]
+      }
+    ]
+  }
