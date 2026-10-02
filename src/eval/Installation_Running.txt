@@ -1,0 +1,21 @@
+cd /opt/simple-rag && source .venv/bin/activate
+
+# 1. Install new deps
+pip install -r requirements.txt
+
+# 2. Generate admin password hash
+python -c "from pwdlib import PasswordHash; print(PasswordHash.recommended().hash('your-secure-password'))"
+# Copy to .env as ADMIN_PASSWORD_HASH
+
+# 3. Create data directories
+mkdir -p /opt/simple-rag/data
+
+# 4. Run migrations (creates SQLite tables automatically on first use)
+
+# 5. Start all services
+sudo systemctl restart simple-rag-api
+sudo systemctl enable --now simple-rag-beat simple-rag-flower
+
+# 6. Test login
+curl -X POST http://localhost:8000/auth/login \
+  -d "username=admin&password=your-secure-password"
