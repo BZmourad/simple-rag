@@ -26,7 +26,7 @@ pytest-asyncio
 # v3 additions
 ragas
 langchain-ollama
-langchain-community<0.3.10
+langchain-community<0.4.2
 datasets
 celery[redis]
 redis
@@ -35,3 +35,9 @@ networkx
 gliner
 fastapi-limiter
 python-jose[cryptography]
+
+
+# v4 additions
+falkordblite
+PyJWT
+pwdlib[argon2]

@@ -7,7 +7,7 @@ import logging
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
-
+from src.api.routes_auth import create_auth_router
 from src.api.schemas import (
     AskRequest,
     AskResponse,
@@ -60,13 +60,18 @@ def _build_pipeline(cfg: Config, collection: str, session_id: str = "api"):
 def create_app(cfg: Config) -> FastAPI:
     app = FastAPI(title="Simple RAG API", version="3.0.0")
     auth = AuthManager(
-        enabled=cfg.auth_enabled,
+        mode=cfg.auth_mode,
         valid_keys=cfg.api_keys,
+        jwt_secret=cfg.jwt_secret,
+        jwt_algorithm=cfg.jwt_algorithm,
+        access_expire_minutes=cfg.jwt_access_expire_minutes,
+        refresh_expire_days=cfg.jwt_refresh_expire_days,
         rate_limit_enabled=cfg.rate_limit_enabled,
         redis_url=cfg.rate_limit_redis_url,
         per_minute=cfg.rate_limit_per_minute,
         per_day=cfg.rate_limit_per_day,
     )
+    app.include_router(create_auth_router(auth))
     @app.get("/health")
     def health():
         return {"status": "ok"}
