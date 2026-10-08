@@ -101,6 +101,8 @@ class Config:
     # API
     api_host: str
     api_port: int
+    uvicorn_host: str
+    uvicorn_port: int
 
     # Eval
     eval_dataset_path: Path
@@ -201,6 +203,8 @@ def load_config() -> Config:
         max_history_messages=_get_int("MAX_HISTORY_MESSAGES", 6),
         api_host=os.getenv("API_HOST", "0.0.0.0"),
         api_port=_get_int("API_PORT", 8000),
+        uvicorn_host=os.getenv("UVICORN_HOST", "127.0.0.1"),
+        uvicorn_port=_get_int("UVICORN_PORT", 8000),
         eval_dataset_path=Path(os.getenv("EVAL_DATASET_PATH", "./eval/golden_dataset.json")).resolve(),
         debug=_get_bool("DEBUG", False),
         ragas_enabled=_get_bool("RAGAS_ENABLED", True),
@@ -250,6 +254,6 @@ def load_config() -> Config:
         raise ValueError("CHUNK_OVERLAP must be smaller than CHUNK_SIZE")
     if not 0.0 <= cfg.relevance_threshold <= 1.0:
         raise ValueError("RELEVANCE_THRESHOLD must be between 0.0 and 1.0")
-    if cfg.auth_enabled and not cfg.api_keys:
-        raise ValueError("AUTH_ENABLED=true requires at least one API key in API_KEYS")
+    if cfg.auth_enabled and cfg.auth_mode == "apikey" and not cfg.api_keys:
+        raise ValueError("API_KEY mode requires at least one key in API_KEYS")
     return cfg
