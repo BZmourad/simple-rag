@@ -304,8 +304,7 @@ def create_app(cfg: Config) -> FastAPI:
 
     return app
 
-
 def run_server(cfg: Config) -> None:
     import uvicorn
     app = create_app(cfg)
-    uvicorn.run(app, host=cfg.api_host, port=cfg.api_port)
+    uvicorn.run(app, host=cfg.uvicorn_host, port=cfg.uvicorn_port)
