@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in — Simple RAG</title>
+  <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+  <main>
+    <div class="login-card">
+      <h2>Simple RAG</h2>
+      <div id="login-error" class="error-banner"></div>
+      <form id="login-form">
+        <div style="margin-bottom: 1rem;">
+          <label for="username" style="display:block; margin-bottom:0.4rem; font-size:0.9rem; color:#4a5568;">Username</label>
+          <input type="text" id="username" name="username" autocomplete="username" required>
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+          <label for="password" style="display:block; margin-bottom:0.4rem; font-size:0.9rem; color:#4a5568;">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" style="width:100%;">Sign in</button>
+      </form>
+    </div>
+  </main>
+  <script src="/ui/app.js"></script>
+</body>
+</html>

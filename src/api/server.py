@@ -29,8 +29,8 @@ from src.rag import RAGPipeline
 from src.reranker import get_reranker
 from src.vector_store import VectorStoreError, create_vector_store
 
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 def _build_pipeline(cfg: Config, collection: str, session_id: str = "api", with_graph: bool = True):
     """Build a fresh RAG pipeline for one request.
@@ -281,6 +281,26 @@ def create_app(cfg: Config) -> FastAPI:
             return {"backend": cfg.graph_backend, **store.stats()}
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    from src.api.ingest_stream import register_ingest_stream
+    register_ingest_stream(app, cfg, auth)
+
+    # --- Mount static UI ---
+    from pathlib import Path
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import RedirectResponse
+
+    WEB_DIR = Path(__file__).resolve().parents[2] / "web"
+    if WEB_DIR.exists():
+        app.mount("/ui", StaticFiles(directory=str(WEB_DIR), html=True), name="ui")
+
+        @app.get("/")
+        async def root():
+            return RedirectResponse(url="/ui/login.html")
+
+    # --- Register SSE ingest stream ---
+    from src.api.ingest_stream import register_ingest_stream
+    register_ingest_stream(app, cfg, auth)
 
     return app
 

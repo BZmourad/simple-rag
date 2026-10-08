@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat — Simple RAG</title>
+  <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+  <header>
+    <h1>Simple RAG</h1>
+    <nav>
+      <a href="/ui/chat.html" class="active">Chat</a>
+      <a href="/ui/ingest.html">Ingest</a>
+      <a href="#" id="logout-btn">Logout</a>
+    </nav>
+  </header>
+  <main>
+    <div id="chat-messages"></div>
+    <form id="chat-form" class="chat-input-row">
+      <textarea id="chat-input" placeholder="Ask a question about your documents…" rows="1"></textarea>
+      <button type="submit" id="send-btn">Send</button>
+    </form>
+  </main>
+  <script src="/ui/app.js"></script>
+</body>
+</html>

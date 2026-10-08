@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ingest — Simple RAG</title>
+  <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+  <header>
+    <h1>Simple RAG</h1>
+    <nav>
+      <a href="/ui/chat.html">Chat</a>
+      <a href="/ui/ingest.html" class="active">Ingest</a>
+      <a href="#" id="logout-btn">Logout</a>
+    </nav>
+  </header>
+  <main>
+    <div class="ingest-box">
+      <h2>Knowledge base ingestion</h2>
+      <div id="ingest-error" class="error-banner"></div>
+
+      <div class="controls">
+        <button id="start-btn">Start ingestion</button>
+      </div>
+
+      <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+      <div id="progress-text" class="progress-text">Idle</div>
+
+      <div id="file-list" class="file-list"></div>
+
+      <div id="summary" class="summary">
+        <h3>Ingestion complete</h3>
+        <dl>
+          <dt>Documents processed</dt><dd id="sum-docs">0</dd>
+          <dt>Chunks created</dt><dd id="sum-created">0</dd>
+          <dt>Chunks stored</dt><dd id="sum-stored">0</dd>
+          <dt>Total in collection</dt><dd id="sum-total">0</dd>
+        </dl>
+      </div>
+    </div>
+  </main>
+  <script src="/ui/app.js"></script>
+</body>
+</html>
