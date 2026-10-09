@@ -292,6 +292,15 @@ def create_app(cfg: Config) -> FastAPI:
     from src.api.ingest_stream import register_ingest_stream
     register_ingest_stream(app, cfg, auth)
 
+    # Settings
+    from src.settings_store import SettingsStore
+    from src.api.settings import register_settings_routes
+    from src.api.files import register_file_routes
+
+    settings_store = SettingsStore(cfg.env_path) 
+    register_settings_routes(app, settings_store, auth)
+    register_file_routes(app, cfg, auth)
+
     return app
 
 def run_server(cfg: Config) -> None:

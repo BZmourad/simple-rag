@@ -218,22 +218,110 @@ function escapeHtml(s) {
 }
 
 // ---------- Ingest page ----------
-function initIngest() {
+async function initIngest() {
   const startBtn = document.getElementById('start-btn');
   if (!startBtn) return;
   if (!requireAuth()) return;
 
-  const logoutBtn = document.getElementById('logout-btn');
-  logoutBtn.addEventListener('click', () => {
-    clearToken();
-    window.location.href = '/ui/login.html';
-  });
-
+  const dropZone = document.getElementById('upload-drop');
+  const fileInput = document.getElementById('file-input');
+  const uploadList = document.getElementById('upload-list');
+  const filesTable = document.getElementById('files-table');
+  const refreshBtn = document.getElementById('refresh-btn');
   const progressFill = document.getElementById('progress-fill');
   const progressText = document.getElementById('progress-text');
   const fileList = document.getElementById('file-list');
   const summary = document.getElementById('summary');
   const errEl = document.getElementById('ingest-error');
+
+  async function refreshFiles() {
+    try {
+      const resp = await apiFetch('/files/list');
+      const data = await resp.json();
+      renderFiles(data.files || []);
+    } catch (ex) {
+      filesTable.innerHTML = `<div class="empty">Error: ${escapeHtml(ex.message)}</div>`;
+    }
+  }
+
+  function renderFiles(files) {
+    if (!files.length) {
+      filesTable.innerHTML = '<div class="empty">No files yet. Upload one above.</div>';
+      return;
+    }
+    filesTable.innerHTML = '';
+    for (const f of files) {
+      const row = document.createElement('div');
+      row.className = 'file-item';
+      row.innerHTML = `
+        <span class="name">${escapeHtml(f.name)}</span>
+        <span class="size">${formatBytes(f.size)}</span>
+        <span class="actions">
+          <button class="btn-danger" data-name="${escapeHtml(f.name)}">Delete</button>
+        </span>
+      `;
+      row.querySelector('button').addEventListener('click', () => deleteFile(f.name));
+      filesTable.appendChild(row);
+    }
+  }
+
+  async function deleteFile(name) {
+    if (!confirm(`Delete "${name}"?`)) return;
+    try {
+      await apiFetch(`/files/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      await refreshFiles();
+    } catch (ex) {
+      alert(`Delete failed: ${ex.message}`);
+    }
+  }
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragging'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragging');
+    if (e.dataTransfer.files.length) uploadFiles([...e.dataTransfer.files]);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) uploadFiles([...fileInput.files]);
+    fileInput.value = '';
+  });
+
+  async function uploadFiles(files) {
+    for (const file of files) {
+      const item = document.createElement('div');
+      item.className = 'upload-item';
+      item.innerHTML = `<span>${escapeHtml(file.name)}</span><span class="status uploading">uploading…</span>`;
+      uploadList.appendChild(item);
+      const status = item.querySelector('.status');
+
+      try {
+        const token = getToken();
+        const form = new FormData();
+        form.append('file', file);
+        const resp = await fetch(`${API_BASE}/files/upload`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: form,
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ detail: `HTTP ${resp.status}` }));
+          throw new Error(err.detail || `HTTP ${resp.status}`);
+        }
+        status.textContent = 'done';
+        status.className = 'status done';
+      } catch (ex) {
+        status.textContent = 'failed';
+        status.className = 'status error';
+        item.title = ex.message;
+      }
+    }
+    await refreshFiles();
+    setTimeout(() => { uploadList.innerHTML = ''; }, 3000);
+  }
+
+  refreshBtn.addEventListener('click', refreshFiles);
 
   startBtn.addEventListener('click', async () => {
     startBtn.disabled = true;
@@ -254,14 +342,12 @@ function initIngest() {
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let total = 0;
       const rows = new Map();
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-
         const events = buffer.split('\n\n');
         buffer = events.pop();
 
@@ -275,13 +361,11 @@ function initIngest() {
             else if (line.startsWith('data: ')) data += line.slice(6);
           }
           if (!data) continue;
-
           let parsed;
           try { parsed = JSON.parse(data); } catch { continue; }
 
           if (eventType === 'start') {
-            total = parsed.total;
-            progressText.textContent = `${total} file(s) to process`;
+            progressText.textContent = `${parsed.total} file(s) to process`;
           } else if (eventType === 'file') {
             updateFileRow(rows, fileList, parsed);
             const pct = Math.round((parsed.index / parsed.total) * 100);
@@ -308,6 +392,14 @@ function initIngest() {
       startBtn.disabled = false;
     }
   });
+
+  function formatBytes(n) {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  await refreshFiles();
 }
 
 function updateFileRow(rows, container, data) {
@@ -325,9 +417,120 @@ function updateFileRow(rows, container, data) {
   stageEl.className = `stage ${data.stage}`;
 }
 
+async function initSettings() {
+  const saveBtn = document.getElementById('save-btn');
+  if (!saveBtn) return;
+  if (!requireAuth()) return;
+
+  const providerSelect = document.getElementById('LLM_PROVIDER');
+  const sections = document.querySelectorAll('.provider-section');
+  const errorEl = document.getElementById('settings-error');
+  const successEl = document.getElementById('settings-success');
+  const testResult = document.getElementById('test-result');
+  const testBtn = document.getElementById('test-btn');
+  const resetBtn = document.getElementById('reset-btn');
+
+  // All editable field IDs
+  const FIELDS = [
+    'LLM_PROVIDER', 'LLAMACPP_BASE_URL', 'LLAMACPP_MODEL', 'LLAMACPP_TIMEOUT',
+    'OPENROUTER_API_KEY', 'OPENROUTER_MODEL', 'OPENROUTER_BASE_URL',
+    'GEMINI_API_KEY', 'GEMINI_MODEL',
+    'TOP_K', 'RERANK_TOP_K', 'RELEVANCE_THRESHOLD',
+    'HYBRID_ENABLED', 'RERANKER_ENABLED',
+    'QUERY_EXPANSION_ENABLED', 'QUERY_EXPANSION_MODE',
+    'MAX_HISTORY_MESSAGES',
+    'RATE_LIMIT_PER_MINUTE', 'RATE_LIMIT_PER_DAY',
+  ];
+
+  function showProviderSection(provider) {
+    sections.forEach(sec => {
+      sec.hidden = sec.dataset.provider !== provider;
+    });
+  }
+
+  providerSelect.addEventListener('change', () => showProviderSection(providerSelect.value));
+
+  async function loadSettings() {
+    try {
+      const resp = await apiFetch('/settings');
+      const data = await resp.json();
+      const s = data.settings || {};
+      for (const k of FIELDS) {
+        const el = document.getElementById(k);
+        if (!el) continue;
+        if (s[k] !== undefined && s[k] !== null) {
+          el.value = s[k];
+        }
+      }
+      showProviderSection(providerSelect.value || 'llamacpp');
+    } catch (ex) {
+      errorEl.textContent = `Failed to load: ${ex.message}`;
+      errorEl.classList.add('visible');
+    }
+  }
+
+  saveBtn.addEventListener('click', async () => {
+    errorEl.classList.remove('visible');
+    successEl.classList.remove('visible');
+    const values = {};
+    for (const k of FIELDS) {
+      const el = document.getElementById(k);
+      if (!el) continue;
+      const v = el.value.trim();
+      if (v === '') continue;
+      // Skip masked secrets
+      if (v.startsWith('****')) continue;
+      values[k] = v;
+    }
+    try {
+      const resp = await apiFetch('/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ values }),
+      });
+      const data = await resp.json();
+      successEl.textContent = `Saved ${data.count} setting(s). Restart the API to fully apply.`;
+      successEl.classList.add('visible');
+      setTimeout(() => successEl.classList.remove('visible'), 5000);
+    } catch (ex) {
+      errorEl.textContent = `Save failed: ${ex.message}`;
+      errorEl.classList.add('visible');
+    }
+  });
+
+  testBtn.addEventListener('click', async () => {
+    testResult.classList.remove('visible', 'ok', 'error');
+    testResult.textContent = 'Testing…';
+    testResult.classList.add('visible');
+    try {
+      const resp = await apiFetch('/settings/test', { method: 'POST' });
+      const data = await resp.json();
+      testResult.classList.add(data.status === 'ok' ? 'ok' : 'error');
+      testResult.textContent = `${data.provider}: ${data.status} — ${typeof data.detail === 'object' ? JSON.stringify(data.detail) : data.detail}`;
+    } catch (ex) {
+      testResult.classList.add('error');
+      testResult.textContent = `Test failed: ${ex.message}`;
+    }
+  });
+
+  resetBtn.addEventListener('click', async () => {
+    if (!confirm('Reset runtime overrides and fall back to .env values?')) return;
+    try {
+      await apiFetch('/settings/reset', { method: 'POST' });
+      successEl.textContent = 'Runtime overrides cleared. Reload the page to see .env values.';
+      successEl.classList.add('visible');
+      await loadSettings();
+    } catch (ex) {
+      errorEl.textContent = `Reset failed: ${ex.message}`;
+      errorEl.classList.add('visible');
+    }
+  });
+
+  await loadSettings();
+}
 // ---------- Bootstrap ----------
 document.addEventListener('DOMContentLoaded', () => {
   initLogin();
   initChat();
   initIngest();
+  initSettings();
 });

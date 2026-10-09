@@ -13,22 +13,33 @@
       <a href="/ui/chat.html">Chat</a>
       <a href="/ui/ingest.html" class="active">Ingest</a>
       <a href="#" id="logout-btn">Logout</a>
+      <a href="/ui/settings.html">Settings</a>
     </nav>
   </header>
   <main>
     <div class="ingest-box">
-      <h2>Knowledge base ingestion</h2>
-      <div id="ingest-error" class="error-banner"></div>
-
+      <h2>Documents</h2>
+      <div id="upload-drop" class="drop-zone">
+        <p><strong>Drop files here</strong> or click to browse</p>
+        <p class="hint">Supported: PDF, DOCX, TXT, MD — max 50 MB each</p>
+        <input type="file" id="file-input" multiple hidden
+               accept=".pdf,.docx,.txt,.md,.markdown">
+      </div>
+      <div id="upload-list" class="upload-list"></div>
+  
+      <hr class="divider">
+  
+      <h2>Knowledge base files</h2>
       <div class="controls">
+        <button id="refresh-btn" class="btn-secondary">Refresh</button>
         <button id="start-btn">Start ingestion</button>
       </div>
-
+      <div id="ingest-error" class="error-banner"></div>
       <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
       <div id="progress-text" class="progress-text">Idle</div>
-
-      <div id="file-list" class="file-list"></div>
-
+  
+      <div id="files-table" class="files-table"></div>
+  
       <div id="summary" class="summary">
         <h3>Ingestion complete</h3>
         <dl>
@@ -38,6 +49,11 @@
           <dt>Total in collection</dt><dd id="sum-total">0</dd>
         </dl>
       </div>
+    </div>
+  
+    <div class="ingest-box" style="margin-top: 1rem;">
+      <h2>Ingestion progress</h2>
+      <div id="file-list" class="file-list"></div>
     </div>
   </main>
   <script src="/ui/app.js"></script>

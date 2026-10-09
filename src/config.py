@@ -183,6 +183,8 @@ class Config:
     uvicorn_host: str
     uvicorn_port: int
 
+    env_path: Path
+
 
 def load_config() -> Config:
     cfg = Config(
@@ -269,6 +271,7 @@ def load_config() -> Config:
         workers=_get_int("WORKERS", 4),
         uvicorn_host=os.getenv("UVICORN_HOST", "127.0.0.1"),
         uvicorn_port=_get_int("UVICORN_PORT", 8000),
+        env_path=Path(os.getenv("ENV_PATH", "/opt/simple-rag/.env")).resolve(),
     )
 
     # Validation

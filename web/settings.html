@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — Simple RAG</title>
+  <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+  <header>
+    <h1>Simple RAG</h1>
+    <nav>
+      <a href="/ui/chat.html">Chat</a>
+      <a href="/ui/ingest.html">Ingest</a>
+      <a href="/ui/settings.html" class="active">Settings</a>
+      <a href="#" id="logout-btn">Logout</a>
+    </nav>
+  </header>
+  <main>
+    <div class="ingest-box">
+      <h2>LLM Provider</h2>
+      <div id="settings-error" class="error-banner"></div>
+      <div id="settings-success" class="success-banner"></div>
+
+      <div class="form-row">
+        <label for="LLM_PROVIDER">Provider</label>
+        <select id="LLM_PROVIDER">
+          <option value="llamacpp">llama.cpp (local)</option>
+          <option value="openrouter">OpenRouter (cloud)</option>
+          <option value="gemini">Gemini (cloud)</option>
+        </select>
+      </div>
+
+      <fieldset class="provider-section" data-provider="llamacpp">
+        <legend>llama.cpp</legend>
+        <div class="form-row">
+          <label for="LLAMACPP_BASE_URL">Base URL</label>
+          <input type="text" id="LLAMACPP_BASE_URL" placeholder="http://127.0.0.1:8080">
+        </div>
+        <div class="form-row">
+          <label for="LLAMACPP_MODEL">Model label</label>
+          <input type="text" id="LLAMACPP_MODEL" placeholder="local">
+        </div>
+        <div class="form-row">
+          <label for="LLAMACPP_TIMEOUT">Timeout (s)</label>
+          <input type="number" id="LLAMACPP_TIMEOUT" placeholder="180">
+        </div>
+      </fieldset>
+
+      <fieldset class="provider-section" data-provider="openrouter">
+        <legend>OpenRouter</legend>
+        <div class="form-row">
+          <label for="OPENROUTER_API_KEY">API key</label>
+          <input type="password" id="OPENROUTER_API_KEY" placeholder="sk-or-v1-...">
+        </div>
+        <div class="form-row">
+          <label for="OPENROUTER_MODEL">Model</label>
+          <input type="text" id="OPENROUTER_MODEL" placeholder="google/gemini-2.0-flash-exp:free">
+        </div>
+        <div class="form-row">
+          <label for="OPENROUTER_BASE_URL">Base URL</label>
+          <input type="text" id="OPENROUTER_BASE_URL" placeholder="https://openrouter.ai/api/v1">
+        </div>
+      </fieldset>
+
+      <fieldset class="provider-section" data-provider="gemini">
+        <legend>Gemini</legend>
+        <div class="form-row">
+          <label for="GEMINI_API_KEY">API key</label>
+          <input type="password" id="GEMINI_API_KEY" placeholder="AIza...">
+        </div>
+        <div class="form-row">
+          <label for="GEMINI_MODEL">Model</label>
+          <input type="text" id="GEMINI_MODEL" placeholder="gemini-2.0-flash">
+        </div>
+      </fieldset>
+
+      <hr class="divider">
+
+      <h2>Retrieval &amp; Reranking</h2>
+      <div class="form-grid">
+        <div class="form-row">
+          <label for="TOP_K">Top K</label>
+          <input type="number" id="TOP_K" placeholder="20">
+        </div>
+        <div class="form-row">
+          <label for="RERANK_TOP_K">Rerank Top K</label>
+          <input type="number" id="RERANK_TOP_K" placeholder="5">
+        </div>
+        <div class="form-row">
+          <label for="RELEVANCE_THRESHOLD">Relevance threshold</label>
+          <input type="number" step="0.05" id="RELEVANCE_THRESHOLD" placeholder="0.70">
+        </div>
+        <div class="form-row">
+          <label for="HYBRID_ENABLED">Hybrid search</label>
+          <select id="HYBRID_ENABLED">
+            <option value="true">Enabled</option>
+            <option value="false">Disabled</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="RERANKER_ENABLED">Reranker</label>
+          <select id="RERANKER_ENABLED">
+            <option value="true">Enabled</option>
+            <option value="false">Disabled</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="QUERY_EXPANSION_ENABLED">Query expansion</label>
+          <select id="QUERY_EXPANSION_ENABLED">
+            <option value="true">Enabled</option>
+            <option value="false">Disabled</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="QUERY_EXPANSION_MODE">Expansion mode</label>
+          <select id="QUERY_EXPANSION_MODE">
+            <option value="hyde">HyDE</option>
+            <option value="multi_query">Multi-query</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="MAX_HISTORY_MESSAGES">History messages</label>
+          <input type="number" id="MAX_HISTORY_MESSAGES" placeholder="6">
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <h2>Rate limiting</h2>
+      <div class="form-grid">
+        <div class="form-row">
+          <label for="RATE_LIMIT_PER_MINUTE">Per minute</label>
+          <input type="number" id="RATE_LIMIT_PER_MINUTE" placeholder="300">
+        </div>
+        <div class="form-row">
+          <label for="RATE_LIMIT_PER_DAY">Per day</label>
+          <input type="number" id="RATE_LIMIT_PER_DAY" placeholder="10000">
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="controls">
+        <button id="save-btn">Save settings</button>
+        <button id="test-btn" class="btn-secondary">Test provider</button>
+        <button id="reset-btn" class="btn-danger">Reset to .env</button>
+      </div>
+
+      <div id="test-result" class="test-result"></div>
+    </div>
+  </main>
+  <script src="/ui/app.js"></script>
+</body>
+</html>
