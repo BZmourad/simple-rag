@@ -1,14 +1,14 @@
 """Query expansion via HyDE and Multi-Query generation, with Redis caching."""
 
 from __future__ import annotations
-
+from typing import Any
 import hashlib
 import json
 import logging
 
 import redis
 
-from src.llm import LLMError, OllamaLLM
+from src.llm import LLMError
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class QueryExpander:
 
     def __init__(
         self,
-        llm: OllamaLLM,
+        llm: Any,
         mode: str = "hyde",
         num_queries: int = 3,
         hyde_temp: float = 0.7,
