@@ -101,8 +101,6 @@ class Config:
     # API
     api_host: str
     api_port: int
-    uvicorn_host: str
-    uvicorn_port: int
 
     # Eval
     eval_dataset_path: Path
@@ -170,6 +168,21 @@ class Config:
     flower_port: int
     flower_basic_auth: str
 
+    # LLM Provider
+    llm_provider: str
+    llamacpp_base_url: str
+    llamacpp_model: str
+    llamacpp_timeout: float
+    openrouter_api_key: str
+    openrouter_model: str
+    openrouter_base_url: str
+    gemini_api_key: str
+    gemini_model: str
+    embedding_provider: str
+    workers: int
+    uvicorn_host: str
+    uvicorn_port: int
+
 
 def load_config() -> Config:
     cfg = Config(
@@ -203,8 +216,6 @@ def load_config() -> Config:
         max_history_messages=_get_int("MAX_HISTORY_MESSAGES", 6),
         api_host=os.getenv("API_HOST", "0.0.0.0"),
         api_port=_get_int("API_PORT", 8000),
-        uvicorn_host=os.getenv("UVICORN_HOST", "127.0.0.1"),
-        uvicorn_port=_get_int("UVICORN_PORT", 8000),
         eval_dataset_path=Path(os.getenv("EVAL_DATASET_PATH", "./eval/golden_dataset.json")).resolve(),
         debug=_get_bool("DEBUG", False),
         ragas_enabled=_get_bool("RAGAS_ENABLED", True),
@@ -245,6 +256,19 @@ def load_config() -> Config:
         celery_ingest_schedule_minutes=_get_int("CELERY_INGEST_SCHEDULE_MINUTES", 60),
         flower_port=_get_int("FLOWER_PORT", 5555),
         flower_basic_auth=os.getenv("FLOWER_BASIC_AUTH", "monitoring:change-me"),
+        llm_provider=os.getenv("LLM_PROVIDER", "llamacpp").lower(),
+        llamacpp_base_url=os.getenv("LLAMACPP_BASE_URL", "http://127.0.0.1:8080"),
+        llamacpp_model=os.getenv("LLAMACPP_MODEL", "local"),
+        llamacpp_timeout=_get_float("LLAMACPP_TIMEOUT", 180.0),
+        openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
+        openrouter_model=os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-exp:free"),
+        openrouter_base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+        gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+        embedding_provider=os.getenv("EMBEDDING_PROVIDER", "ollama").lower(),
+        workers=_get_int("WORKERS", 4),
+        uvicorn_host=os.getenv("UVICORN_HOST", "127.0.0.1"),
+        uvicorn_port=_get_int("UVICORN_PORT", 8000),
     )
 
     # Validation
