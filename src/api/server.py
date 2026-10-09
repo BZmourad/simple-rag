@@ -6,6 +6,7 @@ import json
 import logging
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 
 from src.api.auth import AuthManager
