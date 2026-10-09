@@ -13,7 +13,7 @@ from src.document_loader import load_documents
 from src.embeddings import EmbeddingError
 from src.history_store import HistoryStore
 from src.hybrid_retriever import HybridRetriever
-from src.llm import LLMError, OllamaLLM
+from src.llm import LLMError, create_llm
 from src.prompts import format_sources
 from src.query_expander import QueryExpander
 from src.rag import RAGPipeline
@@ -21,7 +21,7 @@ from src.reranker import get_reranker
 from src.vector_store import VectorStoreError, create_vector_store
 
 BANNER = """========================================
-     Simple RAG Knowledge Agent v4
+     Simple RAG Knowledge Agent v7
 ========================================
 
 Commands:
@@ -60,7 +60,7 @@ def _build_components(cfg: Config, collection: str | None = None, with_graph: bo
         collection=collection,
     )
     reranker = get_reranker(cfg.reranker_model) if cfg.reranker_enabled else None
-    llm = OllamaLLM(model=cfg.llm_model, base_url=cfg.ollama_base_url)
+    llm = create_llm(cfg)
 
     expander = None
     if cfg.query_expansion_enabled:

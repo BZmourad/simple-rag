@@ -6,11 +6,10 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from src.eval.tracker import RagasTracker
 from src.config import Config
 from src.history_store import HistoryStore
 from src.hybrid_retriever import HybridRetriever
-from src.llm import OllamaLLM
+from src.llm import create_llm
 from src.rag import RAGPipeline
 from src.reranker import CrossEncoderReranker
 from src.vector_store import create_vector_store
@@ -61,7 +60,7 @@ def run_eval(cfg: Config) -> int:
         rrf_k=cfg.rrf_k, collection=collection,
     )
     reranker = CrossEncoderReranker(cfg.reranker_model) if cfg.reranker_enabled else None
-    llm = OllamaLLM(model=cfg.llm_model, base_url=cfg.ollama_base_url)
+    llm = create_llm(cfg)
 
     hits = 0
     results = []
@@ -88,28 +87,4 @@ def run_eval(cfg: Config) -> int:
     hit_rate = hits / len(items) if items else 0.0
     print()
     print(f"Retrieval hit-rate: {hit_rate:.2%} ({hits}/{len(items)})")
-    if cfg.ragas_tracking_enabled:
-        tracker = RagasTracker(cfg.ragas_db_path)
-        # Get git commit if available
-        import subprocess
-        try:
-            commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd="/opt/simple-rag").decode().strip()
-        except Exception:
-            commit = None
-
-        run_id = tracker.record(
-            collection=collection,
-            num_items=len(items),
-            faithfulness=summary["faithfulness"],
-            context_precision=summary["context_precision"],
-            context_recall=summary["context_recall"],
-            git_commit=commit,
-        )
-        comparison = tracker.compare(collection)
-        print(f"\nRun #{run_id} recorded.")
-        print(f"Regression check: {comparison['status']}")
-        if comparison.get("regressions"):
-            print("⚠️  Regressions detected:")
-            for metric, delta in comparison["regressions"].items():
-                print(f"    {metric}: {delta:+.4f}")
-        tracker.close()
+    return 0

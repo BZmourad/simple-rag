@@ -174,13 +174,11 @@ def create_app(cfg: Config) -> FastAPI:
     # Ask (non-streaming)
     # ------------------------------------------------------------------ #
     @app.post("/ask", response_model=AskResponse)
-    def ask(req: AskRequest, user=Depends(auth.require_auth)):
+    async def ask(req: AskRequest, user=Depends(auth.require_auth)):
         coll = req.collection or cfg.default_collection
+        _, _, pipeline = await run_in_threadpool(_build_pipeline, cfg, coll, req.session_id)
         try:
-            _, _, pipeline = _build_pipeline(cfg, coll, session_id=req.session_id)
-            result = pipeline.answer(req.question)
-        except (EmbeddingError, VectorStoreError) as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            result = await pipeline.aanswer(req.question)
         except LLMError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -199,25 +197,20 @@ def create_app(cfg: Config) -> FastAPI:
     # Ask (streaming SSE)
     # ------------------------------------------------------------------ #
     @app.post("/ask/stream")
-    def ask_stream(req: AskRequest, user=Depends(auth.require_auth)):
+    async def ask_stream(req: AskRequest, user=Depends(auth.require_auth)):
         coll = req.collection or cfg.default_collection
+        _, _, pipeline = await run_in_threadpool(_build_pipeline, cfg, coll, req.session_id)
 
-        def event_generator():
+        async def event_generator():
             try:
-                _, _, pipeline = _build_pipeline(cfg, coll, session_id=req.session_id)
-                for event in pipeline.stream_answer(req.question):
+                async for event in pipeline.astream_answer(req.question):
                     if event["type"] == "token":
-                        payload = json.dumps({"token": event["content"]})
-                        yield f"event: token\ndata: {payload}\n\n"
+                        yield f"event: token\ndata: {json.dumps({'token': event['content']})}\n\n"
                     elif event["type"] == "done":
-                        sources = [
-                            {
-                                "filename": c.metadata.get("filename"),
-                                "page": c.metadata.get("page"),
-                                "similarity": getattr(c, "similarity", None),
-                            }
-                            for c in event.get("sources", [])
-                        ]
+                        sources = [{"filename": c.metadata.get("filename"),
+                                    "page": c.metadata.get("page"),
+                                    "similarity": getattr(c, "similarity", None)}
+                                for c in event.get("sources", [])]
                         yield f"event: done\ndata: {json.dumps({'sources': sources})}\n\n"
             except Exception as exc:
                 yield f"event: error\ndata: {json.dumps({'error': str(exc)})}\n\n"
