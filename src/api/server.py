@@ -23,7 +23,7 @@ from src.document_loader import load_documents
 from src.embeddings import EmbeddingError
 from src.history_store import HistoryStore
 from src.hybrid_retriever import HybridRetriever
-from src.llm import LLMError, OllamaLLM
+from src.llm import LLMError, create_llm
 from src.query_expander import QueryExpander
 from src.rag import RAGPipeline
 from src.reranker import get_reranker
@@ -49,7 +49,7 @@ def _build_pipeline(cfg: Config, collection: str, session_id: str = "api", with_
         collection=collection,
     )
     reranker = get_reranker(cfg.reranker_model) if cfg.reranker_enabled else None
-    llm = OllamaLLM(model=cfg.llm_model, base_url=cfg.ollama_base_url)
+    llm = create_llm(cfg)
 
     expander = None
     if cfg.query_expansion_enabled:
@@ -89,7 +89,7 @@ def _build_pipeline(cfg: Config, collection: str, session_id: str = "api", with_
 
 
 def create_app(cfg: Config) -> FastAPI:
-    app = FastAPI(title="Simple RAG API", version="4.0.0")
+    app = FastAPI(title="Simple RAG API", version="7.0.0")
 
     auth = AuthManager(
         mode=cfg.auth_mode,
@@ -112,7 +112,7 @@ def create_app(cfg: Config) -> FastAPI:
     # ------------------------------------------------------------------ #
     @app.get("/health")
     def health():
-        return {"status": "ok", "version": "4.0.0", "auth_mode": cfg.auth_mode}
+        return {"status": "ok", "version": "7.0.0", "auth_mode": cfg.auth_mode, "llm_provider": cfg.llm_provider}
 
     # ------------------------------------------------------------------ #
     # Ingestion
@@ -281,9 +281,6 @@ def create_app(cfg: Config) -> FastAPI:
             return {"backend": cfg.graph_backend, **store.stats()}
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    from src.api.ingest_stream import register_ingest_stream
-    register_ingest_stream(app, cfg, auth)
 
     # --- Mount static UI ---
     from pathlib import Path
