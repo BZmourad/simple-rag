@@ -1,11 +1,9 @@
-"""Ollama LLM client with streaming support."""
+"""LLM factory: switch between llama.cpp, OpenRouter, and Gemini via .env."""
 
 from __future__ import annotations
 
 import logging
-from typing import Iterable, Iterator
-
-import ollama
+from typing import Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -14,58 +12,37 @@ class LLMError(RuntimeError):
     pass
 
 
-class OllamaLLM:
-    def __init__(self, model: str, base_url: str) -> None:
-        self.model = model
-        self.base_url = base_url
-        self._client = ollama.Client(host=base_url)
+def create_llm(cfg):
+    """Return the configured LLM provider.
 
-    def generate(self, system: str, messages: Iterable[dict]) -> str:
-        payload = [{"role": "system", "content": system}, *messages]
-        try:
-            response = self._client.chat(model=self.model, messages=payload)
-        except Exception as exc:
-            raise LLMError(
-                f"Failed to call Ollama LLM '{self.model}'. "
-                f"Ensure Ollama is running and the model is pulled. Error: {exc}"
-            ) from exc
+    Switch via LLM_PROVIDER in .env:
+      - "llamacpp"  → local llama.cpp server
+      - "openrouter" → OpenRouter cloud API
+      - "gemini"     → Google Gemini cloud API
+    """
+    provider = cfg.llm_provider.lower()
 
-        if isinstance(response, dict):
-            content = (response.get("message") or {}).get("content", "")
-        else:
-            content = getattr(getattr(response, "message", None), "content", "") or ""
-        if not content:
-            raise LLMError("Ollama returned an empty response.")
-        return content.strip()
+    if provider == "llamacpp":
+        from src.llm_llamacpp import LlamaCppLLM
+        return LlamaCppLLM(
+            base_url=cfg.llamacpp_base_url,
+            model=cfg.llamacpp_model,
+            timeout=cfg.llamacpp_timeout,
+        )
 
-    def stream_generate(self, system: str, messages: Iterable[dict]) -> Iterator[str]:
-        """Yield tokens as they are produced."""
-        payload = [{"role": "system", "content": system}, *messages]
-        try:
-            stream = self._client.chat(model=self.model, messages=payload, stream=True)
-        except Exception as exc:
-            raise LLMError(
-                f"Failed to stream from Ollama LLM '{self.model}'. "
-                f"Ensure Ollama is running. Error: {exc}"
-            ) from exc
+    if provider == "openrouter":
+        from src.llm_cloud import OpenRouterLLM
+        return OpenRouterLLM(
+            api_key=cfg.openrouter_api_key,
+            model=cfg.openrouter_model,
+            base_url=cfg.openrouter_base_url,
+        )
 
-        for chunk in stream:
-            if isinstance(chunk, dict):
-                content = (chunk.get("message") or {}).get("content", "")
-            else:
-                content = getattr(getattr(chunk, "message", None), "content", "") or ""
-            if content:
-                yield content
+    if provider == "gemini":
+        from src.llm_cloud import GeminiLLM
+        return GeminiLLM(api_key=cfg.gemini_api_key, model=cfg.gemini_model)
 
-    def health_check(self) -> None:
-        try:
-            self._client.chat(
-                model=self.model,
-                messages=[{"role": "user", "content": "ping"}],
-                options={"num_predict": 1},
-            )
-        except Exception as exc:
-            raise LLMError(
-                f"LLM model '{self.model}' is not available. "
-                f"Run: ollama pull {self.model}. Error: {exc}"
-            ) from exc
+    raise LLMError(
+        f"Unknown LLM_PROVIDER='{provider}'. "
+        f"Valid options: llamacpp, openrouter, gemini"
+    )

@@ -57,7 +57,10 @@ class RAGPipeline:
         self.graph_max_depth = graph_max_depth
         self.knowledge_graph: FalkorGraphStore | None = knowledge_graph
 
-    def answer(self, question: str) -> RAGAnswer:
+    async def answer(self, question: str) -> RAGAnswer:
+        """Async version of answer()."""
+        # ... same retrieval/rerank logic, but await ...
+        answer_text = await self.llm.agenerate(system=system_prompt, messages=messages)
         question = (question or "").strip()
         if not question:
             return RAGAnswer(answer="Please provide a non-empty question.")
@@ -141,8 +144,11 @@ class RAGPipeline:
         self._push_history(question, answer_text)
         return RAGAnswer(answer=answer_text, sources=sources, used_context=True)
 
-    def stream_answer(self, question: str):
-        """Yield tokens as they arrive; sources are attached to the final yield."""
+    async def stream_answer(self, question: str):
+        """Async streaming version."""
+        async for token in self.llm.astream_generate(system=system_prompt, messages=messages):
+            yield {"type": "token", "content": token}
+        yield {"type": "done", "sources": sources}
         question = (question or "").strip()
         if not question:
             yield {"type": "token", "content": "Please provide a non-empty question."}
